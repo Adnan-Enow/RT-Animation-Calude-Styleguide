@@ -102,7 +102,10 @@ const BackgroundBlob: React.FC = () => {
   );
 };
 
-const CardChrome: React.FC<{ progress: number }> = ({ progress }) => {
+const CardChrome: React.FC<{ progress: number; clean?: boolean }> = ({
+  progress,
+  clean,
+}) => {
   const lift = interpolate(progress, [0, 1], [16, 0]);
   const scale = interpolate(progress, [0, 1], [0.985, 1]);
   const opacity = interpolate(progress, [0, 1], [0, 1]);
@@ -117,13 +120,17 @@ const CardChrome: React.FC<{ progress: number }> = ({ progress }) => {
         opacity,
         transform: `translateY(${lift}px) scale(${scale})`,
         transformOrigin: "50% 50%",
-        background: "rgba(255,255,255,0.86)",
-        backdropFilter: "blur(8.8px)",
-        WebkitBackdropFilter: "blur(8.8px)",
-        border: "0.76px solid rgba(255,255,255,0.71)",
-        boxShadow:
-          "0 1px 0 rgba(255,255,255,0.6) inset, 0 30px 60px -20px rgba(60, 80, 160, 0.18), 0 8px 24px -8px rgba(60, 80, 160, 0.12)",
-        borderRadius: 4,
+        // In `clean` mode (used by Banner-Card variant): solid white,
+        // no translucency, no border, no shadow, no rounded corners.
+        // Default mode keeps the glass-card look.
+        background: clean ? "#ffffff" : "rgba(255,255,255,0.86)",
+        backdropFilter: clean ? undefined : "blur(8.8px)",
+        WebkitBackdropFilter: clean ? undefined : "blur(8.8px)",
+        border: clean ? "none" : "0.76px solid rgba(255,255,255,0.71)",
+        boxShadow: clean
+          ? "none"
+          : "0 1px 0 rgba(255,255,255,0.6) inset, 0 30px 60px -20px rgba(60, 80, 160, 0.18), 0 8px 24px -8px rgba(60, 80, 160, 0.12)",
+        borderRadius: clean ? 0 : 4,
         overflow: "hidden",
       }}
     />
@@ -374,6 +381,14 @@ export const BannerStage: React.FC<{
    */
   showBackground?: boolean;
   /**
+   * If true, strips the card's drop shadow, border, border-radius, and
+   * translucent backdrop-filter — turns the glass card into a flat
+   * opaque white rectangle. Used by the Banner-Card composition where
+   * the canvas size matches the card exactly and any chrome
+   * decoration would cause clipping or artefacts. Default false.
+   */
+  cleanCard?: boolean;
+  /**
    * Sequence of footer text stages. Each stage transitions from the
    * previous stage's text to its own `toText` over [start, start+duration].
    * Backspace + retype is computed automatically via common-prefix detection.
@@ -393,6 +408,7 @@ export const BannerStage: React.FC<{
   cardEntryDuration = 24,
   showFooter = true,
   showBackground = true,
+  cleanCard = false,
   footerStages,
   footerText,
   footerWriteStart,
@@ -442,7 +458,7 @@ export const BannerStage: React.FC<{
     <AbsoluteFill style={{ background: "#ffffff" }}>
       {showBackground ? <BackgroundBlob /> : null}
       {showBackground ? <GridLines /> : null}
-      <CardChrome progress={cardProgress} />
+      <CardChrome progress={cardProgress} clean={cleanCard} />
       <div
         style={{
           position: "absolute",
@@ -453,7 +469,7 @@ export const BannerStage: React.FC<{
           overflow: "hidden",
           opacity: contentProgress,
           transform: `translateY(${interpolate(contentProgress, [0, 1], [6, 0])}px)`,
-          borderRadius: 4,
+          borderRadius: cleanCard ? 0 : 4,
         }}
       >
         {children}

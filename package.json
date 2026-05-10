@@ -29,7 +29,8 @@
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc",
     "render": "remotion render Banner out/banner.mp4 --crf=14",
-    "render-clean": "remotion render Banner-Clean out/banner-clean.mp4 --crf=14"
+    "render-clean": "remotion render Banner-Clean out/banner-clean.mp4 --crf=14",
+    "render-card": "remotion render Banner-Card out/banner-card.mp4 --crf=14 --scale=4"
   },
   "sideEffects": [
     "*.css"

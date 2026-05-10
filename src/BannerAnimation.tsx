@@ -187,7 +187,10 @@ export const BannerAnimation: React.FC<{
   /** If false, hides the soft blue background blob + grid lines. Used by
    *  the "Banner-Clean" composition to render a white-frame-only version. */
   showBackground?: boolean;
-}> = ({ showBackground = true }) => {
+  /** If true, strips the card's shadow, border, and border-radius — used
+   *  by Banner-Card when the canvas exactly matches the card. */
+  cleanCard?: boolean;
+}> = ({ showBackground = true, cleanCard = false }) => {
   const frame = useCurrentFrame();
 
   // Scene 1 visibility: 1 from start through frame 280, fades to 0 by 320.
@@ -236,6 +239,7 @@ export const BannerAnimation: React.FC<{
       cardEntryStart={6}
       cardEntryDuration={24}
       showBackground={showBackground}
+      cleanCard={cleanCard}
       footerStages={FOOTER_STAGES}
     >
       {/* Always-visible base — F7F7F7 inner area + header band tint */}
@@ -289,5 +293,42 @@ export const BannerAnimation: React.FC<{
       <Scene4Header />
       <Scene4WorkArea />
     </BannerStage>
+  );
+};
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * BannerCardOnly — experimental composition variant.
+ *
+ * Wraps BannerAnimation inside a canvas that EXACTLY matches the card
+ * dimensions (378 × 475). The card is rendered with `cleanCard=true` so
+ * it has no drop shadow, no border, no border-radius — just a flat
+ * opaque white rectangle as the backdrop. Everything outside the card
+ * gets clipped.
+ *
+ * Use this when you want to composite the card animation on top of your
+ * own background in code rather than render the full banner with the
+ * built-in blue blob backdrop. The render is exactly the card area, so
+ * dropping it into a CSS layout requires no further cropping.
+ *
+ * This composition is a "for try" variant; the canonical production
+ * compositions remain Banner (with blob) and Banner-Clean (white frame).
+ * ──────────────────────────────────────────────────────────────────────── */
+
+export const BANNER_CARD_WIDTH = CARD.w;   // 378
+export const BANNER_CARD_HEIGHT = CARD.h;  // 475
+
+export const BannerCardOnly: React.FC = () => {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: -CARD.x,
+        top: -CARD.y,
+        width: 1452,
+        height: 709,
+      }}
+    >
+      <BannerAnimation showBackground={false} cleanCard={true} />
+    </div>
   );
 };

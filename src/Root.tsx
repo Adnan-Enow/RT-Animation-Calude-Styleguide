@@ -1,7 +1,13 @@
 import "./index.css";
 import { Composition } from "remotion";
 import { Scene1PD, SCENE1_PD_DURATION } from "./scenes/Scene1PD";
-import { BannerAnimation, BANNER_DURATION } from "./BannerAnimation";
+import {
+  BannerAnimation,
+  BANNER_DURATION,
+  BannerCardOnly,
+  BANNER_CARD_WIDTH,
+  BANNER_CARD_HEIGHT,
+} from "./BannerAnimation";
 
 /**
  * Banner geometry — every scene shares this stage.
@@ -41,6 +47,14 @@ export const RemotionRoot: React.FC = () => {
         width={WIDTH}
         height={HEIGHT}
         defaultProps={{ showBackground: false }}
+      />
+      <Composition
+        id="Banner-Card"
+        component={BannerCardOnly}
+        durationInFrames={BANNER_DURATION}
+        fps={FPS}
+        width={BANNER_CARD_WIDTH}
+        height={BANNER_CARD_HEIGHT}
       />
       <Composition
         id="Scene1-PD"
