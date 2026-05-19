@@ -1,17 +1,7 @@
 import "./index.css";
 import { Composition } from "remotion";
 import { Scene1PD, SCENE1_PD_DURATION } from "./scenes/Scene1PD";
-import {
-  Scene1PDFast,
-  SCENE1_PD_FAST_DURATION,
-  Scene1PDFastCardOnly,
-  SCENE1_PD_FAST_CARD_WIDTH,
-  SCENE1_PD_FAST_CARD_HEIGHT,
-} from "./scenes/Scene1PD-Fast";
-import {
-  Scene1PDFast16,
-  SCENE1_PD_FAST16_DURATION,
-} from "./scenes/Scene1PD-Fast16";
+import { Scene1PDFast, SCENE1_PD_FAST_DURATION } from "./scenes/Scene1PD-Fast";
 import {
   BannerAnimation,
   BANNER_DURATION,
@@ -79,22 +69,6 @@ export const RemotionRoot: React.FC = () => {
         id="Scene1-PD-Fast"
         component={Scene1PDFast}
         durationInFrames={SCENE1_PD_FAST_DURATION}
-        fps={FPS}
-        width={WIDTH}
-        height={HEIGHT}
-      />
-      <Composition
-        id="Scene1-PD-Fast-Card"
-        component={Scene1PDFastCardOnly}
-        durationInFrames={SCENE1_PD_FAST_DURATION}
-        fps={FPS}
-        width={SCENE1_PD_FAST_CARD_WIDTH}
-        height={SCENE1_PD_FAST_CARD_HEIGHT}
-      />
-      <Composition
-        id="Banner-Fast-16s"
-        component={Scene1PDFast16}
-        durationInFrames={SCENE1_PD_FAST16_DURATION}
         fps={FPS}
         width={WIDTH}
         height={HEIGHT}

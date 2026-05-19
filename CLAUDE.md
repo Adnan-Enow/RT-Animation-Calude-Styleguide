@@ -13,15 +13,25 @@ this first; everything else is supporting detail.
 
 ---
 
-## Status (end of day 1)
+## Status
 
+**Day 1**
 - ✅ All four scenes are wired into one `Banner` composition
 - ✅ Footer staged transitions work across all 4 scenes (5 written tails, 4 backspaces)
 - ✅ `Banner-Clean` composition exists (white frame only, no blue blob) for clean renders
 - ✅ Render config tuned for high quality (PNG intermediates + CRF 14)
 - ✅ Snapshot at `snapshots/all-scenes-v1/` is the rollback recovery point
-- 🔧 **The whole banner needs scene-by-scene fine-tuning.** That's the next session's work.
-  See [Per-scene fine-tuning notes](#per-scene-fine-tuning-notes).
+
+**Day 2 — Fast variants + card-only export**
+- ✅ `Scene1-PD-Fast` — 22 s (660 frames) optimised orchestrator weaving all 4 scenes
+- ✅ `Banner-Fast-16s` — 16 s (480 frames) ultra-compact variant (scaled 480/660 ≈ 0.727)
+- ✅ Scene 4 F1 and F4 now share a slide-up entrance + restored full ticket detail (activity bars, tag columns, content lines)
+- ✅ Scene 4 F4 green resolved badge has a pop-in (overshoot scale) inside the same fade window
+- ✅ Scene 4 F3 → F4 is now strictly sequential (no cross-fade): F3 fades out fully before F4 enters
+- ✅ `Scene1-PD-Fast-Card` — card-only render variant of the Fast banner (378 × 475, no blob, no shadow)
+- ✅ Export verified at `--crf=14 --scale=4` (5808 × 2836 full / 1512 × 1900 card) — see [Render workflow](#render-workflow)
+
+See [Fast variants](#fast-variants-22s-and-16s) for the full timing breakdown and [Card-only export](#card-only-export-the-frame-only-render) for how the no-background render works.
 
 ---
 
@@ -51,15 +61,19 @@ npx remotion still Banner out/check.png --frame=1500 --scale=0.5
 ```
 
 Compositions registered in [`src/Root.tsx`](src/Root.tsx):
-| ID | What it is |
-|---|---|
-| `Banner` | Full continuous banner with the soft blue background blob — production |
-| `Banner-Clean` | Same animation, no blob, no grid lines — pure white background |
-| `Scene1-PD` | Scene 1 in isolation (260 frames). Frozen reference matching `snapshots/scene1-final/` |
+| ID | What it is | Size | Duration |
+|---|---|---|---|
+| `Banner` | Full continuous banner with the soft blue background blob — production | 1452 × 709 | 1880f / 62.7s |
+| `Banner-Clean` | Same animation, no blob, no grid lines — pure white background | 1452 × 709 | 1880f / 62.7s |
+| `Banner-Card` | Original banner cropped to the card only (no blob, no shadow) — composite-friendly | 378 × 475 | 1880f / 62.7s |
+| `Scene1-PD` | Scene 1 in isolation (260 frames). Frozen reference matching `snapshots/scene1-final/` | 1452 × 709 | 260f |
+| `Scene1-PD-Fast` | **22 s optimised banner** (all 4 scenes orchestrated) — with blob | 1452 × 709 | 660f / 22s |
+| `Scene1-PD-Fast-Card` | Same Fast banner cropped to the card only (no blob, no shadow) — composite-friendly | 378 × 475 | 660f / 22s |
+| `Banner-Fast-16s` | **16 s ultra-compact variant** of the Fast banner (scaled 480/660 ≈ 0.727) | 1452 × 709 | 480f / 16s |
 
-Composition dimensions: **1452 × 709 @ 30fps**. Don't change.
+Composition dimensions for full banners: **1452 × 709 @ 30fps**. Card-only compositions are **378 × 475 @ 30fps**. Don't change.
 
-Total `Banner` duration: **1880 frames ≈ 62.7 seconds**.
+Total `Banner` duration: **1880 frames ≈ 62.7 seconds**. See [Fast variants](#fast-variants-22s-and-16s) for the optimised versions.
 
 ---
 
@@ -571,3 +585,564 @@ styles. That's the design.
 
 The user iterates fast. Make minimal, focused changes. Ask if scope is
 unclear. Don't refactor without prompting.
+
+---
+
+## Original banner (62.7 s) — canonical timing record
+
+This is the original production `Banner` composition — 1880 frames at
+30 fps = 62.7 s. **Don't conflate it with the Fast variants in the next
+section.** The two are independent timelines; changing one does not
+affect the other.
+
+| Aspect | Value |
+|---|---|
+| Composition ID | `Banner` (with blob) / `Banner-Clean` (white only) / `Banner-Card` (card only) |
+| Master orchestrator | [`src/BannerAnimation.tsx`](src/BannerAnimation.tsx) (`T` block + `FOOTER_STAGES`) |
+| Scene files | `Scene1PD.tsx` / `Scene2SD.tsx` / `Scene3Staffing.tsx` / `Scene4IT.tsx` |
+| Duration | 1880 frames / 62.7 s |
+
+### Original — Scene-by-scene timeline
+
+All frame numbers are absolute (from frame 0 of the composition).
+
+```
+Frame      Beat
+─────      ──────────────────────────────────────────────────────────
+0–~30      Glass card entrance (BannerStage default; chrome only)
+38–138     Footer types "Best at Crafting Proposals"
+38–56      Scene 1 paper panel fades in
+60–115     Scene 1: 11 skeleton lines cascade in uneven (stagger 5, dur 12/line)
+~115–138   Scene 1 uneven hold (lines settle, no movement)
+138–~250   Scene 1: shimmer cascade sweeps each line, geometry morphs
+           uneven → even (per-line stagger 7, shimmer dur 16)
+228–250    Scene 1 sparkle pops (overshoot scale, near panel bottom-right)
+260        Scene 1 standalone duration ends (also `Scene1-PD` composition end)
+280–320    Scene 1 work area fades out (S1→S2 bridge)
+295–330    Footer backspaces tail → "Best at "
+310–345    Scene 2 macOS window controls fade in
+320–365    Scene 2 F1 `</>` icon: < slides from left, > from right, / drops in
+340–410    Footer types "Best at Delivering Software Solutions"
+380–410    Scene 2 F1 `</>` icon fades out
+390–420    Scene 2 F2 code editor structure fades in (file tree + gutter)
+415–~491   Scene 2 F2: 17 code lines type in left-to-right (stagger 4, dur 8/line)
+495–525    Scene 2 F2 glyphs (`</>` accents on code) fade in
+540–580    Scene 2 F2 code editor fades out → kanban takeover
+560–625    Scene 2 F3 kanban dashboard fades in (sub-stagger: outer → sidebar
+           → cards → labels → bars → donut sweep 0°→90°)
+700–740    Scene 2 F3 kanban fades out (S2→S3 bridge)
+720–770    Footer backspaces → "Best at "
+720–770    Scene 2 macOS chrome fades out (overlaps with kanban fade-out)
+730–780    Scene 3 nav rects + search bar fade in
+770–820    Scene 3 F1 single candidate card fades in
+790–830    Footer types "Best at Precision Hiring"
+870–~940   Scene 3 F2: 3 additional candidate cards cascade in below Card 1
+           (stagger 14, per-card fade-in 28 frames)
+945–980    Scene 3 F2 selection cues on Card 3 (checkmark in box + magnifier overlay)
+1000–1040  Scene 3 F2 cards fade out → success state takes over
+1020–1070  Scene 3 F3 success circle scales in (overshoot)
+1050–1090  Scene 3 F3 white checkmark fades in inside circle
+1075–1115  Scene 3 F3 hired labels fade in below
+1200–1240  Scene 3 work area + chrome fade out (S3→S4 bridge)
+1210–1250  Footer backspaces → "Best at "
+1240–1290  Scene 4 plain nav rects fade back in
+1265–1315  Footer types "Best at Providing IT Support"
+1280–1305  Scene 4 F1 ticket card — clean fade-in (no sub-stagger, no slide)
+1410–1450  Scene 4 F1 ticket fades out
+1430–1470  Scene 4 F2: 3 typing dots fade in (sin-bob amplitude motion)
+1490–1525  Scene 4 F2 typing dots fade out (10-frame gap before F3 — no overlap)
+1535–1595  Scene 4 F3 pixel "IT" logo + 2 chat bubbles fade in
+1680–1730  Scene 4 F3 fades out
+1710–1770  Scene 4 F4 resolved ticket + green badge fade in (no slide-up in original)
+1770–1880  Scene 4 F4 holds through end of composition (no further animation)
+1880       Composition end
+```
+
+### Original — Per-file timing constants (canonical source of truth)
+
+**Master orchestrator** ([`src/BannerAnimation.tsx`](src/BannerAnimation.tsx) → `T`):
+
+```ts
+// Scene-level cross-fade gates
+scene1FadeOutStart: 280, scene1FadeOutEnd: 320,
+scene2HeaderFadeOutStart: 720, scene2HeaderFadeOutEnd: 770,
+scene3FadeOutStart: 1200, scene3FadeOutEnd: 1240,
+
+// T.footer — typewriter stages (7 stages, identical structure to Fast)
+s1WriteStart: 38,   s1WriteDuration: 100,  // "Best at Crafting Proposals"
+s12BackspaceStart: 295, s12BackspaceDuration: 35,
+s2WriteStart: 340,  s2WriteDuration: 70,   // "Best at Delivering Software Solutions"
+s23BackspaceStart: 720, s23BackspaceDuration: 50,
+s3WriteStart: 790,  s3WriteDuration: 40,   // "Best at Precision Hiring"
+s34BackspaceStart: 1210, s34BackspaceDuration: 40,
+s4WriteStart: 1265, s4WriteDuration: 50,   // "Best at Providing IT Support"
+
+end: 1880,  // BANNER_DURATION (= SCENE4_END_FRAME)
+```
+
+**Scene 1** ([`src/scenes/Scene1PD.tsx`](src/scenes/Scene1PD.tsx) → `T`):
+
+```ts
+panelFadeStart: 38, panelFadeEnd: 56,
+linesStart: 60,
+perLineAppearStagger: 5,
+perLineAppearDuration: 12,
+unevenHoldEnd: 138,
+shimmerStart: 138,
+perLineShimmerStagger: 7,
+perLineShimmerDuration: 16,
+footerWriteStart: 38, footerWriteDuration: 100,  // mirrors master Stage 1
+sparkleStart: 228, sparkleEnd: 250,
+end: 260,                                         // SCENE1_PD_DURATION
+```
+
+**Scene 2** ([`src/scenes/Scene2SD.tsx`](src/scenes/Scene2SD.tsx) → `T_SCENE2`):
+
+```ts
+headerFadeIn:        { start: 310, end: 345 },  // macOS chrome in
+
+// Frame 1 — `</>` icon (KEPT in original — REMOVED in Fast)
+f1BracketsStart: 320, f1BracketsEnd: 350,       // < / > slide from edges
+f1SlashStart: 340,    f1SlashEnd: 365,          // / drops from above
+f1FadeOut:           { start: 380, end: 410 },
+
+// Frame 2 — code editor
+f2StructureFadeIn:   { start: 390, end: 420 },
+f2CodeLinesStart:    415,
+f2CodeLinesStagger:  4,
+f2CodeLineDuration:  8,
+// 17 lines × 4 stagger + 8 dur → cascade ends ~frame 491
+f2GlyphsFadeIn:      { start: 495, end: 525 },  // `</>` accents on code
+f2FadeOut:           { start: 540, end: 580 },
+
+// Frame 3 — kanban dashboard
+f3FadeIn:            { start: 560, end: 625 },
+f3FadeOut:           { start: 700, end: 740 },
+```
+
+Constants exposed for tuning: `SLIDE_OFFSET = 160` (Frame 1 bracket slide distance).
+
+**Scene 3** ([`src/scenes/Scene3Staffing.tsx`](src/scenes/Scene3Staffing.tsx) → `T_SCENE3`):
+
+```ts
+headerFadeIn:        { start: 730, end: 780 },   // nav + search
+
+// Frame 1 — single candidate card (KEPT in original — REMOVED in Fast)
+f1FadeIn:            { start: 770, end: 820 },
+// (no f1FadeOut — Card 1 persists into F2's list)
+
+// Frame 2 — 3 additional cards cascade in
+f2CardsCascadeStart: 870,
+f2CardsCascadeStagger: 14,
+f2CardsCascadeDuration: 28,
+f2SelectionCueStart: 945,
+f2SelectionCueEnd:   980,                        // checkmark + magnifier on Card 3
+f2FadeOut:           { start: 1000, end: 1040 },
+
+// Frame 3 — success state
+f3CircleFadeIn:      { start: 1020, end: 1070 }, // big blue circle (overshoot)
+f3CheckmarkFadeIn:   { start: 1050, end: 1090 },
+f3LabelsFadeIn:      { start: 1075, end: 1115 },
+
+// (SCENE3_END_FRAME = 1200, declared separately)
+```
+
+**Scene 4** ([`src/scenes/Scene4IT.tsx`](src/scenes/Scene4IT.tsx) → `T_SCENE4`):
+
+```ts
+headerFadeIn: { start: 1240, end: 1290 },  // plain nav rects in
+
+// Frame 1 — ticket card (clean fade-in, NO slide-up — that's a Fast-only addition)
+f1FadeIn:     { start: 1280, end: 1305 },
+f1FadeOut:    { start: 1410, end: 1450 },
+
+// Frame 2 — 3 typing dots (KEPT in original — REMOVED in Fast)
+f2FadeIn:     { start: 1430, end: 1470 },
+f2FadeOut:    { start: 1490, end: 1525 },  // must fully clear before F3
+
+// Frame 3 — pixel "IT" logo + 2 chat bubbles
+f3FadeIn:     { start: 1535, end: 1595 },  // ~10-frame gap after F2 clears
+f3FadeOut:    { start: 1680, end: 1730 },
+
+// Frame 4 — resolved ticket + green badge (NO internal checkmark — user removed it)
+f4FadeIn:     { start: 1710, end: 1770 },
+// (no f4FadeOut — F4 holds through SCENE4_END_FRAME = 1880)
+```
+
+### Original — Critical invariants
+
+- **Scene 1 is frozen** — snapshotted at `snapshots/scene1-final/`.
+  Don't fine-tune unless the user explicitly asks.
+- **F2 → F3 gap in Scene 4** (10 frames, 1525 → 1535) is intentional;
+  the typing dots are a discrete beat, not a backdrop. Don't remove it.
+- **No slide-up on F1 / F4 in Scene 4** — that's a Fast-only addition
+  the user asked for in the optimised variant. The original F1/F4 use
+  a flat fade-in only.
+- **No internal white checkmark inside F4 ticket** — user removed it.
+  Only the green resolved badge signals "done".
+- **No Frame 5 in Scene 4** — user explicitly cut the 3-stacked-tickets
+  visual. Don't reinstate.
+- **The persistent `"Best at "` prefix** is shared across all 7 footer
+  stages — only tails rewrite.
+
+### Original — Where to edit what
+
+| User asks | Edit this |
+|---|---|
+| "Change a footer tagline" | `FOOTER_STAGES` in [`BannerAnimation.tsx`](src/BannerAnimation.tsx) — change the `toText`. Adjust `duration` (~2 frames/char) if length changes significantly. |
+| "Shift a scene earlier / later" | The matching `scene<N>FadeOut*` keys in `T` (master) and the `T_SCENE<N>` block in the scene file. Both need to stay aligned. |
+| "Change the bracket slide-in distance (Scene 2 F1)" | `SLIDE_OFFSET` in [`Scene2SD.tsx`](src/scenes/Scene2SD.tsx). |
+| "Tweak code-line typing speed (Scene 2 F2)" | `f2CodeLinesStagger` (per-line delay) and `f2CodeLineDuration` (per-line typing window) in `T_SCENE2`. |
+| "Tweak the candidate cascade (Scene 3 F2)" | `f2CardsCascadeStagger` and `f2CardsCascadeDuration` in `T_SCENE3`. |
+| "Adjust the success-circle pop (Scene 3 F3)" | `circleScale` interpolation inside `Frame3Success` in [`Scene3Staffing.tsx`](src/scenes/Scene3Staffing.tsx). Currently uses `OVERSHOOT` curve. |
+| "Change Scene 4 F1 fade-in pace" | `f1FadeIn` window in `T_SCENE4`. Currently 25 frames; user said "clean and quick". |
+| "Adjust typing-dot bob (Scene 4 F2)" | `Math.sin(t * 4 - i * 0.7)` in `Frame2TypingDots` in [`Scene4IT.tsx`](src/scenes/Scene4IT.tsx). |
+| "Tweak the green badge pop (Scene 4 F4)" | `interpolate(badgeVis, [0, 1], [0.4, 1], { easing: OVERSHOOT })` in `Frame4Resolved`. Higher first value → less overshoot. |
+
+### Original — Render commands
+
+| Use case | Command |
+|---|---|
+| With blob | `npx remotion render Banner out/banner.mp4 --crf=14 --scale=4` |
+| White frame only (no blob, no grid) | `npx remotion render Banner-Clean out/banner-clean.mp4 --crf=14 --scale=4` |
+| Card only (no blob, no shadow) | `npx remotion render Banner-Card out/banner-card.mp4 --crf=14 --scale=4` |
+
+Or use the npm aliases: `npm run render` / `npm run render-clean` /
+`npm run render-card`.
+
+---
+
+## Fast variants (22 s and 16 s)
+
+Two parallel orchestrators exist alongside the canonical 62.7 s banner.
+They share `BannerStage`, the colour palette, easings, and footer
+mechanic — only the timing is compressed. **Don't conflate them with the
+production `BannerAnimation`. The 62.7 s `Banner` is untouched.**
+
+| Variant | File | Composition ID | Duration | Built from |
+|---|---|---|---|---|
+| Fast (22 s) | `src/scenes/Scene1PD-Fast.tsx` (orchestrator) | `Scene1-PD-Fast` | 660 f / 22 s | `Scene1PD-Fast` + `Scene2SD-Fast` + `Scene3Staffing-Fast` + `Scene4IT-Fast` |
+| Fast (22 s) card-only | (wrapper export in same file: `Scene1PDFastCardOnly`) | `Scene1-PD-Fast-Card` | 660 f / 22 s | Same Fast scenes, cropped to card (no blob, no shadow) |
+| Fast 16 s | `src/scenes/Scene1PD-Fast16.tsx` (orchestrator) | `Banner-Fast-16s` | 480 f / 16 s | `Scene1PD-Fast16` + `Scene2SD-Fast16` + `Scene3Staffing-Fast16` + `Scene4IT-Fast16` |
+
+The 16 s variant is a literal duplicate of the 22 s files with **every
+frame-based number multiplied by `480/660 ≈ 0.727` and rounded**. Pixel
+values (slide distances, sizes) and easing curves are unchanged.
+
+### 22 s Fast — Scene-by-scene timeline
+
+All frame numbers are absolute (from frame 0 of the composition).
+
+```
+Frame      Beat
+─────      ──────────────────────────────────────────────────────────
+0–6        Glass card entrance (cardEntryStart=6, duration=24)
+30–100     Footer types "Best at Crafting Proposals"
+38–52      Scene 1 paper panel fades in
+50–113     Scene 1: 11 skeleton lines cascade in (stagger 3, dur 10/line)
+           Each line shimmers after appearance (delay 2, shimmer dur 14)
+108–130    Scene 1 sparkle pops (overshoot scale)
+130–150    Scene 1 tail-fade (paper + lines + sparkle clear)
+130–160    Footer backspaces tail → "Best at " (s1→s2 bridge)
+135–168    Scene 1 nav-rect chrome fades out
+140–170    Scene 2 macOS window controls fade in
+165–195    Scene 2 code editor structure fades in (file tree + gutter)
+165–235    Footer types "Best at Delivering Software Solutions"
+190–229    Scene 2 12 code lines type in (stagger 3, per-line dur 6)
+240–265    Scene 2 code-editor fade-out → kanban takeover
+250–295    Scene 2 kanban dashboard fades in (3 sub-phases on this envelope)
+305–335    Scene 2 macOS chrome + work area fade out (S2→S3 bridge)
+305–340    Footer backspaces → "Best at "
+325–355    Scene 3 nav rects + search bar fade in
+340–382    Scene 3: 4 candidate cards cascade in (stagger 8, dur 18/card)
+345–381    Footer types "Best at Precision Hiring"
+345–381    Scene 3 search-bar text "Precision Hiring" fades in
+358–392    Scene 3 per-card zoom pulse (10 frames per card, scale 1.06)
+393–406    Scene 3 selection cue (checkmark on Card 3) — after all pulses
+410–428    Scene 3 cards fade out → success state takes over
+415–445    Scene 3 success circle scales in (overshoot)
+440–465    Scene 3 white checkmark fades in
+460–485    Scene 3 hired labels fade in
+488–515    Scene 3 nav + search + work area fade out (S3→S4 bridge)
+488–518    Footer backspaces → "Best at "
+490–520    Scene 4 plain nav rects fade in
+510–535    Scene 4 F1 ticket slides up from y=+22 px + fades in
+522–564    Footer types "Best at Providing IT Support"
+545–565    Scene 4 F1 ticket fades out
+550–590    Scene 4 F3: pixel "IT" logo + 2 chat bubbles fade in
+605–625    Scene 4 F3 fades out FULLY (no cross-fade with F4)
+625–655    Scene 4 F4 resolved ticket slides up from y=+22 px + fades in
+           Green resolved badge pops in (overshoot, scale 0.3→1) inside
+           the back half of the same fade window
+660        End of composition (hold ~5 frames after F4 settles)
+```
+
+### 22 s Fast — Per-file timing constants (canonical source of truth)
+
+**Master orchestrator** ([`src/scenes/Scene1PD-Fast.tsx`](src/scenes/Scene1PD-Fast.tsx)):
+
+```ts
+// T_SCENE1 — Scene-1 work area
+panelFadeStart: 38, panelFadeEnd: 52,
+linesStart: 50, perLineAppearStagger: 3, perLineAppearDuration: 10,
+shimmerDelayAfterAppear: 2, perLineShimmerDuration: 14,
+sparkleStart: 108, sparkleEnd: 130,
+tailFadeStart: 130, tailFadeEnd: 150,
+
+// T — bridge fades between scenes
+scene1HeaderFadeOut: { start: 135, end: 168 },
+scene2HeaderFadeOut: { start: 305, end: 335 },
+scene2WorkAreaFadeOut: { start: 305, end: 335 },
+scene3HeaderFadeOut: { start: 488, end: 515 },
+scene3WorkAreaFadeOut: { start: 488, end: 515 },
+
+// T.footer — typewriter stages (7 stages, mirrors the production banner)
+s1WriteStart: 30,  s1WriteDuration: 70,   // "Best at Crafting Proposals"
+s12BackspaceStart: 130, s12BackspaceDuration: 30,
+s2WriteStart: 165, s2WriteDuration: 70,   // "Best at Delivering Software Solutions"
+s23BackspaceStart: 305, s23BackspaceDuration: 35,
+s3WriteStart: 345, s3WriteDuration: 36,   // "Best at Precision Hiring"
+s34BackspaceStart: 488, s34BackspaceDuration: 30,
+s4WriteStart: 522, s4WriteDuration: 42,   // "Best at Providing IT Support"
+
+end: 660,  // SCENE1_PD_FAST_DURATION
+```
+
+**Scene 2 Fast** ([`src/scenes/Scene2SD-Fast.tsx`](src/scenes/Scene2SD-Fast.tsx) → `T_SCENE2_FAST`):
+
+```ts
+headerFadeIn:        { start: 140, end: 170 },  // macOS chrome in
+f2StructureFadeIn:   { start: 165, end: 195 },  // file tree + gutter
+f2CodeLinesStart:    190,
+f2CodeLinesStagger:  3,
+f2CodeLineDuration:  6,
+f2FadeOut:           { start: 240, end: 265 },  // code editor → kanban
+f3FadeIn:            { start: 250, end: 295 },  // kanban (3 sub-phases)
+f3HoldEnd:           315,
+```
+
+Note: in this Fast variant, Scene 2 **Frame 1 (`</>` icon)** is REMOVED.
+The first beat is the code editor directly. Don't reinstate the bracket
+slide-in.
+
+**Scene 3 Fast** ([`src/scenes/Scene3Staffing-Fast.tsx`](src/scenes/Scene3Staffing-Fast.tsx) → `T_SCENE3_FAST`):
+
+```ts
+headerFadeIn:        { start: 325, end: 355 },  // nav + search
+searchTextFadeIn:    { start: 345, end: 381 },  // "Precision Hiring" in search
+cardsCascadeStart:   340,
+cardsCascadeStagger: 8,
+cardsCascadeDuration: 18,
+cardPulseDuration:   10,
+cardPulsePeakScale:  1.06,
+selectionCue:        { start: 393, end: 406 },  // checkmark only on Card 3
+cardsFadeOut:        { start: 410, end: 428 },
+f3CircleFadeIn:      { start: 415, end: 445 },  // big blue circle (overshoot)
+f3CheckmarkFadeIn:   { start: 440, end: 465 },
+f3LabelsFadeIn:      { start: 460, end: 485 },
+holdEnd:             490,
+```
+
+Note: in this Fast variant, Scene 3 **Frame 1 (single candidate preview
++ magnifier overlay)** is REMOVED. The cards cascade in directly.
+
+**Scene 4 Fast** ([`src/scenes/Scene4IT-Fast.tsx`](src/scenes/Scene4IT-Fast.tsx) → `T_SCENE4_FAST`):
+
+```ts
+headerFadeIn:  { start: 490, end: 520 },  // plain nav rects in
+f1FadeIn:      { start: 510, end: 535 },  // F1 ticket slides up + fades in
+f1FadeOut:     { start: 545, end: 565 },
+f1SlideFromY:  22,                        // px below resting position
+f3FadeIn:      { start: 550, end: 590 },  // pixel IT logo + chat bubbles
+f3FadeOut:     { start: 605, end: 625 },  // FULLY out before F4 starts
+f4FadeIn:      { start: 625, end: 655 },  // F4 resolved ticket slides up
+f4SlideFromY:  22,
+holdEnd:       660,
+```
+
+**Critical invariants for Scene 4:**
+- `f3FadeOut.end === f4FadeIn.start` (625 === 625). The two frames
+  touch exactly — no cross-fade, no overlap. The user chose this
+  explicitly. Don't reintroduce overlap.
+- F1 and F4 share the **same slide-up entrance** (`translateY: 22 → 0`
+  across the fade-in window, eased with `SOFT_OUT`).
+- F4 green resolved badge has a **pop-in inside the same fade window**:
+  `badgeVis = interpolate(visibility, [0.5, 1], [0, 1])` then
+  `badgeScale = interpolate(badgeVis, [0, 1], [0.3, 1], { easing: OVERSHOOT })`.
+  Adjust the `[0.3, 1]` range to dampen / intensify the overshoot.
+- Scene 4 Frame 2 (typing dots) is REMOVED in the Fast variant. Don't
+  reinstate.
+
+### 22 s Fast — Restored ticket detail (F1 + F4)
+
+The user explicitly asked for the full skeleton ticket detail. Both F1
+and F4 render the full set of elements (don't simplify these away):
+- 4 horizontal content lines
+- 5-tag column (rects at x=652.236 for F1, x=670.822 for F4)
+- 11 activity bars + 1 wide bar (x columns `F1_ACTIVITY_BAR_X` / `F4_ACTIVITY_BAR_X`,
+  wide bar `F1_WIDE_BAR` / `F4_WIDE_BAR`)
+- Middle tag (x=717 for F1, x=727.401 for F4)
+
+### 16 s Fast — Scaling rule
+
+Every frame number from the 22 s variant is multiplied by `480/660` and
+rounded. Pixel offsets, slide distances, easings, FOOTER_STAGES *texts*,
+and per-line stagger COUNTS are unchanged. The result preserves the
+visual rhythm — entrances are proportionally faster, holds are
+proportionally shorter, but pacing relationships and overshoot
+intensity stay constant.
+
+If a 22 s timing changes, **regenerate the 16 s timing by re-applying
+the scale factor** rather than hand-editing it. Always verify the F3 → F4
+no-overlap invariant survives:
+
+```ts
+// In Scene4IT-Fast16.tsx, after any timing change, this must hold:
+T_SCENE4_FAST.f3FadeOut.end === T_SCENE4_FAST.f4FadeIn.start
+```
+
+Currently (480 / 660 scale): `f3FadeOut.end = 455`, `f4FadeIn.start = 455`. ✅
+
+---
+
+## Card-only export ("the frame-only render")
+
+Often you don't want the blue blob or any banner chrome — just the
+glass card with its inner animation, ready to composite on top of an
+arbitrary background in CSS, Figma, or video editing software.
+
+Two card-only compositions exist:
+
+| Composition | Source | Duration |
+|---|---|---|
+| `Banner-Card` | Original 62.7 s `BannerAnimation` cropped to card | 1880 f |
+| `Scene1-PD-Fast-Card` | 22 s Fast banner cropped to card | 660 f |
+
+**How it works (the pattern):**
+
+The wrapper renders the full 1452 × 709 banner inside a composition
+that is exactly the card size (`378 × 475`), positioned so the card
+falls at `(0, 0)`. The full banner is offset by `(-CARD.x, -CARD.y)`
+so only the card region is visible — everything outside the card area
+is clipped. The wrapper passes two flags to the inner animation:
+
+- `showBackground={false}` — suppresses the soft blue `BackgroundBlob`
+  and the `GridLines` overlay (the desk surface). The white
+  `AbsoluteFill` remains so transparency around the card is replaced
+  by white.
+- `cleanCard={true}` — tells `CardChrome` to render the card with NO
+  drop shadow, NO border, NO border-radius. Just a flat opaque white
+  rectangle as the backdrop.
+
+The result is a tightly-cropped MP4 sized exactly to the card geometry
+(at `--scale=4`: `1512 × 1900`), with the animation positioned correctly
+inside it and no extraneous chrome.
+
+**Existing wrapper components** (don't duplicate — extend if you need
+more variants):
+
+- [`BannerCardOnly`](src/BannerAnimation.tsx) → `Banner-Card` (62.7 s)
+- [`Scene1PDFastCardOnly`](src/scenes/Scene1PD-Fast.tsx) → `Scene1-PD-Fast-Card` (22 s)
+
+Both follow the same pattern (see the existing source for the literal
+component shape).
+
+**Adding a card-only variant for a new composition:**
+
+1. Make the inner component (e.g. `Scene1PDFast`) accept optional
+   `showBackground?: boolean` and `cleanCard?: boolean` props, default
+   `true` / `false`, and forward them to its `<BannerStage>`.
+2. Add a small `<XCardOnly>` wrapper component that renders the inner
+   composition wrapped in a `<div>` of size `1452 × 709` offset by
+   `(-CARD.x, -CARD.y)`, passing `showBackground={false}` and
+   `cleanCard={true}`.
+3. Export `<X>_CARD_WIDTH = CARD.w` and `<X>_CARD_HEIGHT = CARD.h`
+   constants from the same file.
+4. Register a new `<Composition>` in [`src/Root.tsx`](src/Root.tsx)
+   with the wrapper as the component, the new constants as `width` /
+   `height`, and the original `<X>_DURATION`.
+
+That's the whole recipe. The render command is identical to any other
+composition — just supply the new composition ID.
+
+---
+
+## Render workflow (full reference)
+
+### High-quality export settings (canonical)
+
+```bash
+# These are the settings used for all production-quality renders.
+# CRF 14 = visually lossless. --scale=4 = 4× pixel density.
+# (PNG intermediates via remotion.config.ts — already set.)
+npx remotion render <id> <outpath> --crf=14 --scale=4
+```
+
+The two render variables — `--crf` (quality) and `--scale` (pixel
+density) — are intentionally **passed at the CLI** rather than baked
+into `remotion.config.ts`, so the same composition can be rendered at
+preview quality or production quality without code changes.
+
+| Use case | Command |
+|---|---|
+| Production banner with blob, 62.7 s | `npx remotion render Banner out/banner.mp4 --crf=14 --scale=4` |
+| Clean banner (white frame), 62.7 s | `npx remotion render Banner-Clean out/banner-clean.mp4 --crf=14 --scale=4` |
+| Card-only, 62.7 s (composite-friendly) | `npx remotion render Banner-Card out/banner-card.mp4 --crf=14 --scale=4` |
+| Fast banner (22 s), with blob | `npx remotion render Scene1-PD-Fast out/scene1-pd-fast.mp4 --crf=14 --scale=4` |
+| **Fast banner card-only (22 s)** | `npx remotion render Scene1-PD-Fast-Card out/scene1-pd-fast-card.mp4 --crf=14 --scale=4` |
+| Fast 16 s variant, with blob | `npx remotion render Banner-Fast-16s out/banner-fast-16s.mp4 --crf=14 --scale=4` |
+| Preview / scrubbing in Studio | `npm run dev` (interactive — no CLI render) |
+| Single still frame for layout check | `npx remotion still <id> out/check.png --frame=<N> --scale=0.5` |
+
+### Output dimensions at `--scale=4`
+
+| Composition | Native | Output @ scale 4 |
+|---|---|---|
+| `Banner` / `Banner-Clean` / `Scene1-PD-Fast` / `Banner-Fast-16s` | 1452 × 709 | 5808 × 2836 |
+| `Banner-Card` / `Scene1-PD-Fast-Card` | 378 × 475 | 1512 × 1900 |
+
+### Why these settings
+
+- **PNG intermediates** (`Config.setVideoImageFormat("png")` in
+  [`remotion.config.ts`](remotion.config.ts)) → no chroma-subsampling
+  artefacts on text edges, gradients, or drop shadows during the
+  intermediate-frame capture stage.
+- **CRF 14** → essentially perceptually lossless H.264. Default is 18.
+  CRF 12 would be visually identical; CRF 18 has subtle banding on the
+  soft blue blob.
+- **`--scale=4`** → renders at 4× pixel density so the resulting MP4
+  can be downsampled cleanly to retina-quality web (or used at native
+  size on 5K displays).
+
+If file size becomes a concern, the realistic trade-offs are:
+- Drop to `--scale=2` (halves dimensions) for ~75% smaller files.
+- Raise CRF to 18 for ~50% smaller files with imperceptible quality loss.
+- Both at once for ~85% smaller files.
+
+### Output locations
+
+All renders land in `out/` (gitignored). The latest production-quality
+renders from this session:
+
+| File | Composition | Size |
+|---|---|---|
+| `out/scene1-pd-fast.mp4` | `Scene1-PD-Fast` (22 s, with blob) | ~28 MB |
+| `out/scene1-pd-fast-card.mp4` | `Scene1-PD-Fast-Card` (22 s, card only) | ~1.5 MB |
+
+The card-only render is much smaller because (a) the pixel count is
+~13× lower, and (b) the white background compresses extremely well
+under H.264.
+
+---
+
+## Common edits — addendum for Fast variants
+
+| User asks | Edit this |
+|---|---|
+| "Change the Fast tagline X to Y" | `FOOTER_STAGES` in [`Scene1PD-Fast.tsx`](src/scenes/Scene1PD-Fast.tsx)'s `T.footer` block. Mirror the change in `Scene1PD-Fast16.tsx` (scale the duration by 480/660). |
+| "Speed up Scene N in Fast" | Edit the matching `T_SCENE<N>_FAST` block in `Scene<N>-Fast.tsx`. **Then re-derive `Scene<N>-Fast16.tsx`** by multiplying every frame number by 480/660. |
+| "Change F4 slide distance in Scene 4 Fast" | `T_SCENE4_FAST.f4SlideFromY` in [`Scene4IT-Fast.tsx`](src/scenes/Scene4IT-Fast.tsx). Mirror in `-Fast16.tsx`. Pixel values are NOT scaled by 480/660. |
+| "Remove F1/F4 slide-up motion" | Delete the `slideY` interpolation and the wrapping `translateY()` div in `Frame1Ticket` / `Frame4Resolved` in `Scene4IT-Fast.tsx`. |
+| "Render the Fast banner without the background" | `npx remotion render Scene1-PD-Fast-Card out/<name>.mp4 --crf=14 --scale=4` |
+| "Render at lower quality for preview" | Same command with `--crf=23 --scale=1`. |
+| "Add a card-only variant of the 16 s composition" | Follow the [recipe](#card-only-export-the-frame-only-render); make `Scene1PDFast16` accept the same props and add a `Scene1PDFast16CardOnly` wrapper. |
